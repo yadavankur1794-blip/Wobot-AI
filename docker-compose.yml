@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16.4-bookworm
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env or the shell}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env or the shell}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or the shell}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  service:
+    build: .
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgres://${POSTGRES_USER:?Set POSTGRES_USER in .env or the shell}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env or the shell}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env or the shell}
+      DATABASE_POOL_MAX: 5
+      LOG_LEVEL: info
+      UPLOAD_ROOT: /data/uploads
+      REPORT_ROOT: /data/reports
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    mem_limit: 512m
+    volumes:
+      - service-data:/data
+
+volumes:
+  postgres-data:
+  service-data:
